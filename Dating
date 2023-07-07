@@ -1,0 +1,286 @@
+ /*1- Показать TOP-10 пользователей с самым высоким средним рейтингом анкеты 
+ (Anketa_Rate, AVG, средний рейтинг должен быть представлен в виде вещественного числа)*/
+SELECT TOP 10 u.nick AS [имя пользователя], 
+		u.user_id AS [номер пользователя], 
+		u.age AS [возраст], 
+		gender.name AS [пол],
+		ROUND (AVG (CAST (rating AS float)), 2) AS [средний бал]
+FROM anketa_rate r JOIN users u
+ON u.user_id=r.id_kogo JOIN gender ON u.sex=gender.id
+GROUP BY u.nick, u.user_id, u.age, gender.name
+ORDER BY 5 DESC
+
+SELECT * FROM users
+/*2 - Показать всех пользователей с высшим образованием, которые не курят, не пьют и не употребляют наркотики*/
+SELECT * FROM smoking
+SELECT * FROM drinking
+SELECT * FROM drugs
+SELECT* FROM education
+
+SELECT u.nick AS [имя пользователя], 
+       u.user_id AS [номер пользователя], 
+       u.age AS [возраст], 
+       gender.name AS [пол],
+       education.name AS [образование]
+FROM users u
+JOIN gender ON u.sex = gender.id JOIN education ON education.id=u.id_education
+GROUP BY u.nick, u.user_id, u.age, gender.name, u.id_education, u.my_smoke, 
+	u.my_drink, u.my_drugs, u.id_education, education.name
+HAVING (u.my_smoke = 1 OR u.my_drink = 0 OR u.my_drugs = 0 OR u.my_drugs = 1 OR u.my_drugs = 7)
+  AND u.id_education >= 5
+ORDER BY u.id_education DESC
+
+/*3 - Сделать запрос, который позволит найти пользователей по указанным данным:
+- ник (не обязательно точный)
+- пол
+- минимальный и максимальный возраст
+- минимальный и максимальный рост
+- минимальный и максимальный вес
+*/
+
+SELECT* FROM users
+
+DECLARE @nickName nvarchar(20) = 'Алекс%', 
+		@userGender int =1, 
+		@ageMin int = 18, 
+		@ageMax int = 40,
+		@weightMin int = 0, 
+		@weightMax int = 90
+
+SELECT u.nick AS [имя пользователя], 
+       u.user_id AS [номер пользователя], 
+       u.age AS [возраст], 
+       gender.name AS [пол]
+FROM users u JOIN gender ON u.sex = gender.id 
+WHERE u.nick LIKE @nickName AND u.sex=@userGender AND u.age BETWEEN @ageMin AND @ageMax
+		AND u.ves BETWEEN @weightMin AND @weightMax
+GROUP BY u.nick, u.user_id, u.age, gender.name
+ORDEr BY u.age DESC
+
+/*4. Показать всех стройных голубоглазых блондинок, затем всех спортивных кареглазых брюнетов, 
+а в конце их общее количество (UNION, одним запросом на SELECT)*/
+
+SELECT * FROM eyescolor
+SELECT * FROM haircolor
+SELECT* FROM sport
+
+SELECT [имя пользователя], [номер пользователя], [возраст], [пол], [Общее количество]
+FROM (
+    SELECT u.nick AS [имя пользователя], 
+           u.user_id AS [номер пользователя], 
+           u.age AS [возраст], 
+           gender.name AS [пол], 
+	       COUNT(*) AS [Общее количество],
+	       1 AS [SortOrder]
+    FROM users u 
+    JOIN gender ON u.sex = gender.id 
+    WHERE u.sex = 2 AND u.ves <= 55 AND u.eyes_color = 4 AND u.hair_color = 1
+    GROUP BY u.nick, u.user_id, u.age, gender.name
+	
+    UNION
+	
+    SELECT u.nick AS [имя пользователя], 
+           u.user_id AS [номер пользователя], 
+           u.age AS [возраст], 
+           gender.name AS [пол],
+	       COUNT(*) AS [Общее количество],
+	       2 AS [SortOrder]
+    FROM users u 
+    JOIN gender ON u.sex = gender.id 
+    JOIN users_sport us ON us.user_id = u.id 
+    JOIN sport ON us.sport_id = sport.id
+    WHERE u.sex = 1 AND u.eyes_color = 2 AND u.hair_color=4 AND us.sport_id > 0
+    GROUP BY u.nick, u.user_id, u.age, gender.name
+    
+    UNION 
+    
+    SELECT '', NULL, NULL, '', COUNT(*) AS [Общее количество], 3 AS [SortOrder]
+    FROM (
+        SELECT u.nick AS [имя пользователя], 
+               u.user_id AS [номер пользователя], 
+               u.age AS [возраст], 
+               u.sex AS [пол]
+        FROM users u 
+        WHERE (u.sex = 2 AND u.ves <= 55 AND u.eyes_color = 4 AND u.hair_color = 1)
+        
+        UNION ALL
+        
+        SELECT u.nick AS [имя пользователя], 
+               u.user_id AS [номер пользователя], 
+               u.age AS [возраст], 
+               u.sex AS [пол]
+        FROM users u 
+        JOIN users_sport us ON us.user_id = u.id 
+        JOIN sport ON us.sport_id = sport.id
+        WHERE (u.sex = 1 AND u.eyes_color = 2 AND u.hair_color=4 AND us.sport_id > 0)
+    ) AS Subquery
+) AS Result
+ORDER BY [SortOrder], [имя пользователя]
+
+/*5.Показать всех программистов с пирсингом, которые к тому же умеют вышивать крестиком (Moles, Framework и Interes)*/
+SELECT * FROM users
+SELECT* FROM framework
+SELECT* FROM moles
+SELECT* FROM interes
+
+SELECT* FROM users
+JOIN users_moles ON users.id=moles_id
+JOIN moles ON users_moles.moles_id=moles.id
+WHERE users.id_framework=1  AND users_moles.moles_id=1
+
+SELECT  u.nick AS [имя пользователя], 
+		u.user_id AS [номер пользователя], 
+		u.age AS [возраст], 
+		gender.name AS [пол]
+FROM users u JOIN gender ON u.sex=gender.id 
+	JOIN users_moles um ON um.user_id=u.id 
+	JOIN moles ON um.moles_id=moles.id
+	JOIN users_interes us ON u.id=us.user_id 
+	JOIN interes ON us.interes_id=interes.id
+WHERE  u.id_framework=1 AND um.moles_id=1 AND us.interes_id=23
+GROUP BY u.nick, u.user_id, u.age, gender.name
+
+/*6 - Показать сколько подарков подарили каждому пользователю, у которого знак зодиака Рыбы*/
+SELECT* FROM goroskop
+SELECT* FROM gift_service
+
+SELECT  u.nick AS [имя пользователя], 
+		u.user_id AS [номер пользователя], 
+		u.age AS [возраст], 
+		gender.name AS [пол],
+		COUNT(*) AS [количество подарков Рыбам]
+FROM users u JOIN gender ON u.sex=gender.id 
+		JOIN gift_service gs ON gs.id_to=u.id
+WHERE id_zodiak=12
+GROUP by u.nick, u.user_id, u.age, gender.name
+ORDER BY [количество подарков Рыбам]
+
+/*7 - Показать как много зарабатывают себе на жизнь полиглоты (знающие более 5 языков), совершенно не умеющие готовить*/
+SELECT* FROM users_languages
+
+SELECT u.nick AS [имя пользователя], 
+       u.user_id AS [номер пользователя], 
+       u.age AS [возраст], 
+       gender.name AS [пол],
+	   u.my_rich AS [доход]
+FROM users u 
+JOIN gender ON u.sex = gender.id
+JOIN richness r ON u.my_rich=r.id
+JOIN (
+    SELECT user_id, COUNT(*) AS lang_count
+    FROM users_languages
+    GROUP BY user_id
+) AS ul ON u.id = ul.user_id
+WHERE ul.lang_count > 5 AND u.like_kitchen=4 
+
+
+/*8 - Показать всех буддистов, которые занимаются восточными единоборствами, живут на вокзале, и в свободное время катаются на скейте*/
+SELECT* FROM users
+SELECT* FROM religion
+SELECT*FROM users_sport
+SELECT* FROM sport
+SELECT* FROM region
+
+SELECT u.nick AS [имя пользователя], 
+       u.user_id AS [номер пользователя], 
+       u.age AS [возраст], 
+       gender.name AS [пол]
+FROM users u JOIN gender ON u.sex = gender.id
+JOIN users_sport us ON us.user_id=u.id
+WHERE u.religion=6 AND us.sport_id=9 AND  us.sport_id=6 AND u.my_home=9
+GROUP BY u.nick, u.user_id, u.age, gender.name
+
+/*9 - Показать возрастную аудиторию пользователей в виде:*/
+SELECT u.age, COUNT (*) AS [Всего пользователей], 
+FROM users u
+
+SELECT
+    'до 18' AS [Возрастная группа],
+    COUNT(*) AS [Количество],
+    ROUND(COUNT(*) * 100.0 / (SELECT COUNT(*) FROM users), 2) AS [Процент]
+FROM users
+WHERE age < 18
+UNION ALL
+SELECT
+    '18 -24' AS [Возрастная группа],
+    COUNT(*) AS [Количество],
+    ROUND(COUNT(*) * 100.0 / (SELECT COUNT(*) FROM users), 2) AS [Процент]
+FROM users
+WHERE age >=18 AND age <24
+UNION ALL
+SELECT
+    '24-30' AS [Возрастная группа],
+    COUNT(*) AS [Количество],
+    ROUND(COUNT(*) * 100.0 / (SELECT COUNT(*) FROM users), 2) AS [Процент]
+FROM users
+WHERE age >=24 AND age < 30
+UNION ALL
+SELECT
+    'от 30' AS [Возрастная группа],
+    COUNT(*) AS [Количество],
+    ROUND(COUNT(*) * 100.0 / (SELECT COUNT(*) FROM users), 2) AS [Процент]
+FROM users
+WHERE age >= 30
+
+/*10 - Показать 5 самых популярных слов, отправленных в личных сообщениях, и то, как часто они встречаются*/
+SELECT* FROM messages
+
+CREATE TABLE temp 
+	(word NVARCHAR(MAX));
+
+
+DECLARE @i INT = 1
+DECLARE @count INT
+
+/*Получаем общее количество записей в таблице*/
+SELECT @count = COUNT(*) FROM messages
+
+WHILE @i <= @count
+BEGIN
+    DECLARE @mess NVARCHAR(MAX);
+	/*сообщение по текущему индексу*/
+    SELECT @mess = mess FROM messages WHERE id = @i;
+
+    /*отдельные слова*/
+    WHILE LEN(@mess) > 0
+    BEGIN
+        DECLARE @word NVARCHAR(MAX);
+
+        
+        IF CHARINDEX(' ', @mess) > 0
+            SET @word = LEFT(@mess, CHARINDEX(' ', @mess) - 1);
+        ELSE
+            SET @word = @mess;
+
+        /*Удаляем лишние символы из слова*/
+        SET @word = REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(@word, ',', ''), ':', ''), '?', ''), '!', ''), '*', ''), '=', ''), ')', ''), '(', ''), '.', '');
+
+        /*Добавляем слово во временную таблицу*/
+        IF LEN(@word) > 0
+            INSERT INTO temp (word) SELECT @word;
+
+        /*исключаем отработанное слово из сообщения*/ 
+        IF CHARINDEX(' ', @mess) > 0
+            SET @mess = SUBSTRING(@mess, CHARINDEX(' ', @mess) + 1, LEN(@mess));
+        ELSE
+            SET @mess = '';
+
+        /*пропускаем символы*/ 
+        WHILE LEN(@mess) > 0 AND (LEFT(@mess, 1) = ',' OR LEFT(@mess, 1) = ':' OR LEFT(@mess, 1) = '?' OR LEFT(@mess, 1) = '!' OR LEFT(@mess, 1) = '*' 
+			OR LEFT(@mess, 1) = '(' OR LEFT(@mess, 1) = '(' OR LEFT(@mess, 1) = '^' OR LEFT(@mess, 1) = '"' OR LEFT(@mess, 1) = '.' OR LEFT(@mess, 1) = '/' 
+			OR LEFT(@mess, 1) = '\' OR LEFT(@mess, 1) = '-' OR LEFT(@mess, 1) = '<' OR LEFT(@mess, 1) = '>' OR LEFT(@mess, 1) = '[' OR LEFT(@mess, 1) = ']')
+            SET @mess = SUBSTRING(@mess, 2, LEN(@mess));
+    END
+
+    SET @i = @i + 1;
+END
+
+/*проверка результата добавления слов в таблицу*/
+SELECT DISTINCT word FROM temp;
+
+SELECT TOP 5 word AS [слова], COUNT(*) AS [количество]
+FROM temp
+GROUP BY word
+ORDER BY [количество] DESC;
+
+DROP TABLE temp;
